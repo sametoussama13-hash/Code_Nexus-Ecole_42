@@ -1,91 +1,166 @@
 #!/usr/bin/env python3
 from abc import ABC, abstractmethod
-import Any
+from typing import Any
 
-class DataProcessor:
+
+class DataProcessor(ABC):
     """Class data."""
 
-    def __init__(self, data: list) -> None:
+    def __init__(self) -> None:
         """Init class Dataprocessor"""
-        self.data = data
+        pass
 
     @abstractmethod
-    def process(self, data: list) -> str:
+    def process(self, data: Any) -> str:
         """Process data."""
         pass
 
     @abstractmethod
-    def validation(self, data: list) -> bool:
+    def validate(self, data: Any) -> bool:
         """Chack data."""
         pass
+
+    @abstractmethod
+    def format_output(self, result: str) -> str:
+        "print result"
+        pass
+
 
 class NumericProcessor(DataProcessor):
     """Class NumericProcessor."""
 
-    def __init__(self, data: Any) -> None:
-        super().__init__(data)
+    def __init__(self) -> None:
+        "Init NumericProcessor."
+        super().__init__()
+        self.len_num: int = 0
+        self.sum_data: int = 0
+        self.avg_data: Any = None
 
-    def process(self, data) -> str:
+    def process(self, data: Any) -> str:
+        "Prcess NumericProcessor"
+        data_p = str(data).split()
+        num = [int(x) for x in data_p]
+        self.len_num = len(data_p)
+        self.sum_data = sum(num)
+        self.avg_data = (self.sum_data / self.len_num)
+        return (
+            f"Processed {self.len_num} numeric values,"
+            f" sum={self.sum_data}, avg={self.avg_data}"
+        )
 
-    def validation(self, data) -> bool:
+    def validate(self, data: Any) -> bool:
         """Valid is Numeric"""
-        if isinstance(data, (int, float)):
+        valid: str = "".join(str(data).split('-'))
+        valid = "".join(str(valid).split())
+        if valid.isdigit():
+            print("Initializing Numeric Processor...")
+            print(f"Processing data: {str(data).split()}")
+            print("Validation: Numeric data verified")
             return True
         return False
 
-    def format_output(self, data) -> str:
+    def format_output(self, result: str) -> str:
+        "Put the result."
+        return result
 
 
 class TextProcessor(DataProcessor):
-    """Class NumericProcessor."""
+    """Class Text Processor."""
 
-    def __init__(self, data: list) -> None:
-        super().__init__(data)
-        self.data: list = []
+    def __init__(self) -> None:
+        "init Text Processor."
+        super().__init__()
+        self.len_data: int = 0
+        self.len_word: int = 0
 
-    def process(self, data) -> str:
-        len_data: int = len("".join(data.split()))
-        len_word: int = len(data.split())
-        return self.data.append(data, len_data, len_word)
+    def process(self, data: Any) -> str:
+        "Process Text Processor."
+        data = str(data)
+        self.len_data = len("".join(data.split()))
+        self.len_word = len(data.split())
+        return (
+            f"Processed text: {self.len_data} characters,"
+            f" {self.len_word} words"
+        )
 
-    def validation(self, data) -> bool:
+    def validate(self, data: Any) -> bool:
         """Valid is alpha."""
-        if "".join(data.split()).isalpha():
+        if "".join(str(data).split()).isalpha():
+            print("Initializing Text Processor...")
+            print(f"Processing data: {data}")
+            print("Validation: Text data verified")
             return True
         return False
 
-    def format_output(self, data) -> str:
+    def format_output(self, result: str) -> str:
+        "Put the result."
+        return result
 
 
 class LogProcessor(DataProcessor):
-    """Class NumericProcessor."""
+    """Class Log Processor."""
 
-    def __init__(self, data: list) -> None:
-        super().__init__(data)
-        self.data = process(data)
+    def __init__(self) -> None:
+        "Init Log Processor."
+        super().__init__()
+        self.log: Any = None
 
-    def process(self, data) -> str:
-        return
+    def process(self, data: Any) -> str:
+        "Process Log Processor."
+        data = str(data)
+        if "ALERT" in data or "ERROR" in data:
+            self.log = "".join(str(data).split(":", -1))
+        elif "INFO" in data:
+            self.log = "".join(str(data).split(":", -1))
+        return (
+            f"[ALERT] {self.log.split(' ')[0]} level detected:"
+            f" {self.log.split(' ', 1)[1]}"
+        )
 
-    def validation(self, data) -> bool:
+    def validate(self, data: Any) -> bool:
         """Valid is log."""
-        if "ERROR" or "ALERT" in data:
+        if "ERROR" in data or "ALERT" in data:
+            print("Initializing Log Processor...")
+            print(f"Processing data: {data}")
+            print("Validation: Log entry verified")
             return True
-        return False 
+        return False
 
-    def format_output(self, data) -> str:
+    def format_output(self, result: str) -> str:
+        "Put the result."
+        return result
 
 
-def stream_processor() -> None:
+def stream_processor(data: Any) -> None:
     """Stream prcessor."""
-    DataProcessor = (NumericProcessor(), TextProcessor(), LogProcessor())
-    data: list = ["12345678", "abcd",  "ERROR: Connection timeout"]
-    for l in data:
-        for p in DataProcessor:
-            if p.validation(l):
-                p.process(data)
-
+    info: list[str] = []
+    processors = (
+        NumericProcessor(),
+        TextProcessor(),
+        LogProcessor()
+    )
+    print("\n=== CODE NEXUS - DATA PROCESSOR FOUNDATION ===\n")
+    try:
+        for d in data:
+            for p in processors:
+                if p.validate(d):
+                    result = p.process(d)
+                    info.append(result)
+                    print(f"Output: {p.format_output(result)}\n")
+        print("\n=== Polymorphic Processing Demo ===")
+        i: int = 1
+        for n in info:
+            print(f"result {i}: {n}")
+            i += 1
+    except Exception as e:
+        print(e)
+    finally:
+        print(
+            "\nFoundation systems online."
+            "Nexus ready for advanced streams.\n"
+        )
 
 
 if __name__ == "__main__":
-    stream_processor()
+    data: list[str] = ["-12 3 -4 56 78", "abcd",  "ERROR: Connection timeout"]
+    stream_processor(data)

@@ -31,12 +31,29 @@ class SensorStream(DataStream):
     def __init__(self, stream_id: str, stream_type: str) -> None:
         """Init Sensor stream."""
         super().__init__(stream_id, stream_type)
+        self.temp = 0
+        self.humidity = 0
+        self.pressur = 0
 
     def process_batch(self, data_batch: list[Any]) -> None:
         """Process data."""
-        print(f"Stream ID: {self.stream_id}, Type: {self.stream_type}")
+        i: int = 0
+        for v in data_batch:
+            valeur = str(v).split(":", 1)[1]
+            key = str(v).split(":", -1)[0]
+            if key == "temp":
+                self.temp = float(valeur)
+            elif key == "humidity":
+                self.humidity = float(valeur)
+            elif key == "pressure":
+                self.pressur = float(valeur)
+            i += 1
+        return f"{i} readings processed, avg temp: {self.temp}"
+    
+    def get_stats(self, result) -> dict[str, Union[str, int, float]]:
+        """Get stats."""
+        return result
 
-    # {'temp': 22.5, 'humidity': 65, 'pressure': 1013}
 
 class TransactionStream(DataStream):
     """Class Transaction Stream."""
@@ -44,28 +61,24 @@ class TransactionStream(DataStream):
     def __init__(self, stream_id: str, stream_type: str) -> None:
         """Init Transaction Stream."""
         super().__init__(stream_id, stream_type)
-        self.temp = 0
-        self.humidity = 0
+        self.buy = 0
+        self.sell = 0
         self.pressur = 0
 
     def process_batch(self, data_batch: list[Any]) -> str:
         """Process data."""
-        print(f"Stream ID: {self.stream_id}, Type: {self.stream_type}")
-        print(f"Processing sensor batch: {data_batch}")
-        data: list[float] = []
         i: int = 0
         for v in data_batch:
-            v = str(v).split(":", 1)[1]
-            data.append(v)
-        for s in data and i < 3:
-            if i == 0:
-                self.temp = float(s)
-            elif i == 1:
-                self.humidity = float(s)
-            else:
-                self.pressur = float(s)
+            valeur = str(v).split(":", 1)[1]
+            key = str(v).split(":", -1)[0]
+            if key == "buy":
+                self.buy = int(valeur) + self.buy
+            elif key == "sell":
+                self.sell = int(valeur) + self.sell
             i += 1
-        return f"{i} readings processed, avg temp: {}"
+        if self.buy - self.sell > 0:
+            return f"{i} operations, net flow: +{self.buy - self.sell}"
+        return f"{i} operations, net flow: {self.buy - self.sell}"
 
     
 class EventStream(DataStream):
@@ -74,10 +87,22 @@ class EventStream(DataStream):
     def __init__(self, stream_id: str, stream_type: str) -> None:
         """Init Event Stream."""
         super().__init__(stream_id, stream_type)
+        self.error = 0
+        self.login = 0
+        self.logout = 0
 
     def process_batch(self, data_batch: list[Any]) -> str:
         """Process data."""
-        print(f"Stream ID: {self.stream_id}, Type: {self.stream_type}")
+        i: int = 0
+        for v in data_batch:
+            if v == "error":
+                self.error += 1
+            elif v == "login":
+                self.login += 1
+            elif v == "logout":
+                self.logout += 1
+            i += 1
+        return f"{i} events, {self.error} error detected"
 
 
 class StreamProcessor:
@@ -107,17 +132,15 @@ def data_stream(data_batch: Any) -> None:
                 check = ":".join(d).split(":")
                 if any(k in check for k in sensor_keys):
                     print("\nInitializing Sensor Stream...")
-                    if not (f for f in data if isinstance(f, float)):
-                        raise Exception(
-                            "TypeError: the Type of valeu Sensor data not int"
-                        )
-                    if len(data) < 3:
+                    if len(d) < 3:
                         raise Exception(
                             "TypeError: the Type of valeu Sensor data not int"
                         )
                     r = SensorStream(f"SENSOR_{str(sensor)}",
                                      "Environmental Data")
-                    r.process_batch(data)
+                    print(f"Stream ID: {r.stream_id}, Type: {r.stream_type}")
+                    print(f"Processing sensor batch: {d}")
+                    print(f"Sensor analysis: {r.process_batch(d)}")
                     StreamProcessor.add_data(r)
                     sensor += 1
                 elif any(k in check for k in trans_keys):
@@ -136,7 +159,9 @@ def data_stream(data_batch: Any) -> None:
                         )
                     r = TransactionStream(f"TRANS_{str(trans)}",
                                           "Financial Data")
-                    r.process_batch(data)
+                    print(f"Stream ID: {r.stream_id}, Type: {r.stream_type}")
+                    print(f"Processing sensor batch: {d}")
+                    print(f"Transaction analysis: {r.process_batch(d)}")
                     trans += 1
             else:
                 print("\nInitializing Event Stream...")
@@ -146,7 +171,9 @@ def data_stream(data_batch: Any) -> None:
                             "TypeError: the Event Stream need str data"
                         )
                     r = EventStream(f"EVENT_{str(event)}", "System Events")
-                    r.process_batch(d)
+                    print(f"Stream ID: {r.stream_id}, Type: {r.stream_type}")
+                    print(f"Processing sensor batch: {d}")
+                    print(f"Event analysis: {r.process_batch(d)}")
                     event += 1
     except Exception as e:
         print(e)
@@ -155,8 +182,7 @@ def data_stream(data_batch: Any) -> None:
 if __name__ == "__main__":
     data_batch: list[Any] = [
         ["temp:22.5", "humidity:65", "pressure:1013"],
-        ["buy:100", "sell:150", "credit:75"],
+        ["buy:100", "sell:170", "buy:50"],
         ["login", "error", "logout"]
     ]
     data_stream(data_batch)
-

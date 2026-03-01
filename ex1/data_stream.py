@@ -6,10 +6,10 @@ from typing import Any, Optional, Union
 class DataStream(ABC):
     """Class Data Stream."""
 
-    def __init__(self, stream_id: str, stream_type: str) -> None:
+    def __init__(self, stream_id: str) -> None:
         """Init Data Stream."""
         self.stream_id = stream_id
-        self.stream_type = stream_type
+        self.stream_type: str | None = None
 
     @abstractmethod
     def process_batch(self, data_batch: list[Any]) -> str:
@@ -29,10 +29,11 @@ class DataStream(ABC):
 class SensorStream(DataStream):
     """Class Sensor Stream."""
 
-    def __init__(self, stream_id: str, stream_type: str) -> None:
+    def __init__(self, stream_id: str) -> None:
         """Init Sensor stream."""
-        super().__init__(stream_id, stream_type)
+        super().__init__(stream_id)
         self.process = 0
+        self.stream_type = "environmental data"
         self.temp: list[float] = []
 
     def filter_data(self, data_batch: list[Any],
@@ -87,9 +88,10 @@ class SensorStream(DataStream):
 class TransactionStream(DataStream):
     """Class Transaction Stream."""
 
-    def __init__(self, stream_id: str, stream_type: str) -> None:
+    def __init__(self, stream_id: str) -> None:
         """Init Transaction Stream."""
-        super().__init__(stream_id, stream_type)
+        super().__init__(stream_id)
+        self.stream_type = "financial data"
         self.buy = 0
         self.sell = 0
         self.process = 0
@@ -122,8 +124,14 @@ class TransactionStream(DataStream):
                 self.sell = int(valeur) + self.sell
             self.process += 1
         if self.buy - self.sell > 0:
-            return f"{self.process} operations, net flow: +{self.buy - self.sell}"
-        return f"transaction analysis: {self.process} operations, net flow: {self.buy - self.sell}"
+            return (
+                f"{self.process} operations,"
+                f" net flow: +{self.buy - self.sell}"
+            )
+        return (
+            f"transaction analysis: {self.process} operations"
+            f", net flow: {self.buy - self.sell}"
+        )
 
     def get_stats(self) -> dict[str, Union[str, int, float]]:
         """Get data."""
@@ -133,14 +141,15 @@ class TransactionStream(DataStream):
 class EventStream(DataStream):
     """Class Event Stream."""
 
-    def __init__(self, stream_id: str, stream_type: str) -> None:
+    def __init__(self, stream_id: str) -> None:
         """Init Event Stream."""
-        super().__init__(stream_id, stream_type)
+        super().__init__(stream_id)
+        self.stream_type = "system events"
         self.error = 0
         self.process = 0
 
     def filter_data(self, data_bench: list[Any],
-                    criteria: Optional[Any] | None) -> list[Any]:
+                    criteria: Optional[Any] = None) -> list[Any]:
         """Filter data."""
         data: list[Any] = []
         if criteria is None:
@@ -182,9 +191,9 @@ class StreamProcessor:
         self.id_data_batch += 1
         return self.id_data_batch
 
-    def filter_data(self, data_batch: list[Any],
-                    criteria: Optional[Any] |
-                    None) -> tuple[str, DataStream, str] | None:
+    def handle(self, data_batch: list[Any],
+               criteria: Optional[Any] =
+               None) -> tuple[str, DataStream, str] | None:
         """Add data."""
         sensor_keys: list[str] = ["temp", "humidity", "pressure"]
         trans_keys: list[str] = ["buy", "sell", "buy"]
@@ -192,33 +201,31 @@ class StreamProcessor:
         if all(":" in s for s in data_batch):
             check = ":".join(data_batch).split(":")
             if any(k in check for k in sensor_keys):
-                r: DataStream = SensorStream(f"SENSOR_{self.sensor}",
-                                             "Environmental Data")
-                self.objet_processor.append(r)
-                data = r.filter_data(data_batch, criteria)
-                process = r.process_batch(data)
-                self.stats.update(r.get_stats())
+                a: DataStream = SensorStream(f"SENSOR_{self.sensor}")
+                self.objet_processor.append(a)
+                data = a.filter_data(data_batch, criteria)
+                process = a.process_batch(data)
+                self.stats.update(a.get_stats())
                 self.sensor += 1
-                return process, r, "sensor"
+                return (process, a, "sensor")
             elif any(k in check for k in trans_keys):
-                r: DataStream = TransactionStream(f"TRANS_{self.trans}",
-                                                  "Environmental Data")
-                self.objet_processor.append(r)
-                data = r.filter_data(data_batch, criteria)
-                process = r.process_batch(data)
-                self.stats.update(r.get_stats())
+                b: DataStream = TransactionStream(f"TRANS_{self.trans}")
+                self.objet_processor.append(b)
+                data = b.filter_data(data_batch, criteria)
+                process = b.process_batch(data)
+                self.stats.update(b.get_stats())
                 self.trans += 1
-                return process, r, "transaction"
+                return (process, b, "transaction")
         else:
             if any(k in data_batch for k in event_keys):
-                r: DataStream = EventStream(f"EVENT_{self.event}",
-                                            "Environmental Data")
-                self.objet_processor.append(r)
-                data = r.filter_data(data_batch, criteria)
-                process = r.process_batch(data)
-                self.stats.update(r.get_stats())
+                c: DataStream = EventStream(f"EVENT_{self.event}")
+                self.objet_processor.append(c)
+                data = c.filter_data(data_batch, criteria)
+                process = c.process_batch(data)
+                self.stats.update(c.get_stats())
                 self.event += 1
-                return process, r, "event"
+                return (process, c, "event")
+        return None
 
 
 def data_stream(data_batch: Any) -> None:
@@ -229,9 +236,11 @@ def data_stream(data_batch: Any) -> None:
         streams = StreamProcessor()
         id_data_batch: int = streams.number_data_bach()
         for d in data_batch:
-            p, stream, t = streams.filter_data(d, criteria)
+            res = streams.handle(d, criteria)
+            if res is None:
+                raise Exception("data is incorrect.")
+            p, stream, t = res
             print(f"\nInitializing {str(t).capitalize()} Stream...")
-            stream: DataStream
             print(f"Stream ID: {stream.stream_id}, Type: {stream.stream_type}")
             print(f"Processing {t} batch: {d}")
             print(p)
@@ -246,12 +255,15 @@ def data_stream(data_batch: Any) -> None:
                 print(f"- {s.capitalize()} : {i} operations processed")
             else:
                 print(f"- {s.capitalize()} : {i} events processed")
-        
-        criteria: str = "high"
+
+        criteria = "high"
         print(f"\nStream filtering active: {criteria}-priority data only")
         print("Filtered results:", end="")
         for d in data_batch:
-            _, stream, t = streams.filter_data(d, criteria)
+            rese = streams.handle(d, criteria)
+            if rese is None:
+                raise Exception("data is incorrect.")
+            _, stream, t = rese
             if t in "sensor data".split(" ", -1):
                 stats = stream.get_stats()
                 print(f" {stats.get('sensor data')}"
@@ -261,7 +273,10 @@ def data_stream(data_batch: Any) -> None:
                 print(f" {stats.get('transaction data')}"
                       " large transaction", end="")
                 print()
-        print("\nAll streams processed successfully. Nexus throughput optimal.\n")
+        print(
+            "\nAll streams processed successfully."
+            "Nexus throughput optimal.\n"
+            )
     except Exception as e:
         print(e)
 

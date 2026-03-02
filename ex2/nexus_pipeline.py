@@ -13,7 +13,14 @@ class ProcessingPipline(ABC):
 
     def __init__(self) -> None:
         """Init Processing Pipline."""
-        pass
+        self.normalize: list[dict[str, Any]] = []
+        self.stage: tuple[ProcessingStage] = (InputStage(), TransformStage(), OutputStage())
+
+    def add_stage(self, stage) -> None:
+        """Add Stage."""
+        for stage in self.stage:
+            data = stage.process(data)
+        return data
 
     @abstractmethod
     def process(self, data: Any) -> Union[str, Any]:
@@ -26,10 +33,14 @@ class JSONAdapter(ProcessingPipline):
 
     def __init__(self, pipline_id: str) -> None:
         """Init JSON Adapter."""
+        super().__init__()
         self.pipline_id = pipline_id
 
     def process(self, data: Any) -> Union[str, Any]:
         """Process data."""
+        records = {"source": "JSON", "records": [data]}
+        self.normalize.append(records)
+        return self.add_stage(records)
 
 
 class CSVAdapter(ProcessingPipline):
@@ -37,6 +48,7 @@ class CSVAdapter(ProcessingPipline):
 
     def __init__(self, pipline_id: str) -> None:
         """Init JSON Adapter."""
+        super().__init__()
         self.pipline_id = pipline_id
 
     def process(self, data: Any) -> Union[str, Any]:
@@ -48,6 +60,7 @@ class StreamAdapter(ProcessingPipline):
 
     def __init__(self, pipline_id: str) -> None:
         """Init JSON Adapter."""
+        super().__init__()
         self.pipline_id = pipline_id
 
     def process(self, data: Any) -> Union[str, Any]:
@@ -67,37 +80,57 @@ class InputStage:
 
     def process(self, data: Any) -> Any:
         """Process data."""
-        
+        pass
 
-class TransfomStage:
+
+class TransformStage:
     """Class Transfom Stage."""
 
     def process(self, data: Any) -> Any:
         """Process data."""
+        pass
+
 
 class OutputStage:
     """Class Output Stage."""
 
     def process(self, data: Any) -> Any:
         """Process data."""
+        pass
+
 
 class NexusManager:
     """Class Nexus Manager."""
 
     def __init__(self) -> None:
         """Init Nexus Manager."""
+        self.pipline_json = 0
+        self.pipline_csv = 0
+        self.pipline_stream = 0
 
     def handle(self, data: Any) -> Union[str, Any]:
         """Handle Nexus Process."""
-        if isinstance(data, dict[Any]):
-            jason = JSONAdapter(data)
+        input = InputStage()
+        input.process(data)
+        if isinstance(data, dict):
+            self.pipline_json += 1
+            json = JSONAdapter(f"JSON {self.pipline_json}")
+            data_result: list[Any] = data
+            json.process(data_result)
+        elif isinstance(data, list):
+            csv = CSVAdapter(data)
 
 
 def nexus_pipeline(data: list[Any]) -> None:
     """Process pipline."""
     nexus = NexusManager()
-    for d in data:
-        result = nexus.handle(d)
+    try:
+        for d in data:
+            result = nexus.handle(d)
+
+    except Exception as e:
+        print(e)
+    print("fin")
 
 
 if __name__ == "__main__":

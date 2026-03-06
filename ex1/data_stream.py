@@ -167,7 +167,7 @@ class EventStream(DataStream):
                 self.error += 1
             self.process += 1
         return (f"event analysis: {self.process}"
-                "events, {self.error} error detected")
+                f"events, {self.error} error detected")
 
     def get_stats(self) -> dict[str, Union[str, int, float]]:
         """Get stats."""

@@ -1,0 +1,5 @@
+""" 'deque((maxlen=N))' permet de garder les dernier ellement ajouetr dans une liste."""
+""" 'counetr' est un (dict) sert à augmenter la valeur de la clés et la rajouter si elle existe pas."""
+""" 'defaultdict' est un (dict) qui permet d'ajouter une cles si elle n'existe pas.""" 
+""" 'namedtuple' est un style de tuple qui fonctionne comme instance de class avec des attribut au sein de son tuple. """
+""" 'ChainMap' est un dict qui permet de metre plusieur dict de dans et qui cherche les clés par ordre de classement. """

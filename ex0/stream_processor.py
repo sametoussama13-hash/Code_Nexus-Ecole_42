@@ -38,25 +38,47 @@ class NumericProcessor(DataProcessor):
 
     def process(self, data: Any) -> str:
         "Prcess NumericProcessor"
-        data_p = str(data).split()
-        num = [int(x) for x in data_p]
-        self.len_num = len(data_p)
-        self.sum_data = sum(num)
+        if isinstance(data, list):
+            self.len_num = len(data)
+            self.sum_data = sum(data)
+        elif isinstance(data, (int, float)):
+            self.len_num = 1
+            self.sum_data = data
+        elif isinstance(data, str):
+            data_p = str(data).split()
+            num = [int(x) for x in data_p]
+            self.len_num = len(data_p)
+            self.sum_data = sum(num)
         self.avg_data = (self.sum_data / self.len_num)
         return (
             f"Processed {self.len_num} numeric values,"
-            f" sum={self.sum_data}, avg={self.avg_data}"
+            f" sum={self.sum_data}, avg={round(self.avg_data, 2)}"
         )
 
     def validate(self, data: Any) -> bool:
         """Valid is Numeric"""
-        valid: str = "".join(str(data).split('-'))
-        valid = "".join(str(valid).split())
-        if valid.isdigit():
+        if isinstance(data, list):
+            for d in data:
+                if not isinstance(d, (float, int)):
+                    return False
             print("Initializing Numeric Processor...")
-            print(f"Processing data: {str(data).split()}")
+            print(f"Processing data: {data}")
             print("Validation: Numeric data verified")
             return True
+        elif isinstance(data, (int, float)):
+            print("Initializing Numeric Processor...")
+            print(f"Processing data: {data}")
+            print("Validation: Numeric data verified")
+            return True
+        elif isinstance(data, str):
+            valid1 = str(data).split('-')
+            valid: str = "".join(valid1)
+            valid = "".join(str(valid).split())
+            if valid.isdigit():
+                print("Initializing Numeric Processor...")
+                print(f"Processing data: {str(data).split()}")
+                print("Validation: Numeric data verified")
+                return True
         return False
 
     def format_output(self, result: str) -> str:
@@ -85,7 +107,9 @@ class TextProcessor(DataProcessor):
 
     def validate(self, data: Any) -> bool:
         """Valid is alpha."""
-        if "".join(str(data).split()).isalpha():
+        if isinstance(data, (list, int, float)):
+            return False
+        elif "".join(str(data).split()).isalpha():
             print("Initializing Text Processor...")
             print(f"Processing data: {data}")
             print("Validation: Text data verified")
@@ -119,7 +143,9 @@ class LogProcessor(DataProcessor):
 
     def validate(self, data: Any) -> bool:
         """Valid is log."""
-        if "ERROR" in data or "ALERT" in data:
+        if isinstance(data, (list, int, float)):
+            return False
+        elif "ERROR" in data or "ALERT" in data:
             print("Initializing Log Processor...")
             print(f"Processing data: {data}")
             print("Validation: Log entry verified")
@@ -162,5 +188,5 @@ def stream_processor(data: Any) -> None:
 
 
 if __name__ == "__main__":
-    data: list[str] = ["-12 3 -4 56 78", "abcd",  "ERROR: Connection timeout"]
+    data: list[str] = [[-5, 4, 5], "abcd",  "ERROR: Connection timeout"]
     stream_processor(data)
